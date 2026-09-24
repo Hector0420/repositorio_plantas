@@ -3,332 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Registro Botánico Comunitario</title>
-    <!-- Incluyendo el SDK de Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        :root {
-            --primary: #2d6a4f;
-            --secondary: #40916c;
-            --background: #f4f1de;
-            --error: #e63946;
-            --text: #333;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        /* Encabezado */
-        header {
-            border-bottom: 3px solid var(--primary);
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        h1 { color: var(--primary); margin: 0; width: 100%; }
-        h2 { color: var(--secondary); font-size: 1.2rem; margin-top: 5px; width: 100%; }
-        .header-info { display: flex; gap: 20px; margin-top: 15px; width: 100%; }
-        
-        /* Formularios y Secciones */
-        fieldset {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }
-        legend {
-            font-weight: bold;
-            color: var(--primary);
-            padding: 0 10px;
-        }
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 15px;
-        }
-        .form-group {
-            flex: 1;
-            min-width: 200px;
-            display: flex;
-            flex-direction: column;
-        }
-        label { margin-bottom: 5px; font-weight: 500; }
-        .required::after { content: " *"; color: var(--error); }
-        
-        input[type="text"], input[type="number"], select, textarea {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: inherit;
-        }
-        textarea { resize: vertical; min-height: 80px; }
-        
-        /* Validaciones visuales */
-        .input-error { border: 2px solid var(--error) !important; background-color: #ffe6e6; }
-        .error-message { color: var(--error); font-size: 0.85rem; margin-top: 5px; display: none; }
-        
-        /* Checkboxes y Radios */
-        .options-group {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-top: 5px;
-        }
-        .options-group label {
-            display: flex;
-            align-items: center;
-            font-weight: normal;
-            cursor: pointer;
-        }
-        .options-group input { margin-right: 8px; }
-
-        /* Botones */
-        .actions {
-            display: flex;
-            gap: 15px;
-            justify-content: flex-end;
-            margin-top: 30px;
-        }
-        button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-        .btn-primary { background-color: var(--primary); color: white; }
-        .btn-primary:hover { background-color: #1b4332; }
-        .btn-secondary { background-color: #ccc; color: #333; }
-        .btn-secondary:hover { background-color: #999; }
-
-        /* Alertas de sistema */
-        #system-alert {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div id="system-alert"></div>
-
-    <form id="botanicalForm">
-        <!-- SECCIÓN DEL ENCABEZADO -->
-        <header>
-            <h1>Sistema Comunitario de Saberes Botánicos</h1>
-            <h2>Módulo de Registro Etnobotánico</h2>
-            <div class="header-info">
-                <div class="form-group">
-                    <label>Identificación / Rol del Estudiante:</label>
-                    <input type="text" id="usuario_rol" placeholder="Ej. Equipo 3 - Entrevistador" required>
-                </div>
-                <div class="form-group">
-                    <label>Fecha de Captura (Automática):</label>
-                    <input type="text" id="fecha" readonly style="background-color: #e9ecef; cursor: not-allowed;">
-                </div>
-            </div>
-        </header>
-
-        <!-- SECCIÓN DEL CUERPO -->
-        <!-- 1. Datos Botánicos Maestros -->
-        <fieldset>
-            <legend>Datos Botánicos Maestros</legend>
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="required" for="id_planta">ID de Planta (Único)</label>
-                    <input type="text" id="id_planta" placeholder="Ej. P-001" autocomplete="off">
-                    <div class="error-message">Este campo es obligatorio.</div>
-                </div>
-                <div class="form-group">
-                    <label class="required" for="nombre_comun">Nombre Común</label>
-                    <input type="text" id="nombre_comun" placeholder="Ej. Manzanilla">
-                    <div class="error-message">Este campo es obligatorio.</div>
-                </div>
-                <div class="form-group">
-                    <label for="nombre_cientifico">Nombre Científico (Opcional)</label>
-                    <input type="text" id="nombre_cientifico" placeholder="Ej. Matricaria chamomilla">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="epoca_cosecha">Época de Cosecha</label>
-                    <select id="epoca_cosecha">
-                        <option value="Primavera" selected>Primavera</option>
-                        <option value="Verano">Verano</option>
-                        <option value="Otoño">Otoño</option>
-                        <option value="Invierno">Invierno</option>
-                        <option value="Todo el año">Todo el año</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="tipo_suelo">Tipo de Suelo Preferido</label>
-                    <select id="tipo_suelo">
-                        <option value="Arenoso">Arenoso</option>
-                        <option value="Arcilloso">Arcilloso</option>
-                        <option value="Limoso" selected>Limoso (Tierra fértil)</option>
-                        <option value="Pedregoso">Pedregoso</option>
-                    </select>
-                </div>
-            </div>
-        </fieldset>
-
-        <!-- 2. Clasificación Progresiva y Receta -->
-        <fieldset>
-            <legend>Clasificación de Partes y Receta</legend>
-            
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label class="required">Partes de la Planta (Seleccione al menos una)</label>
-                <div class="options-group" id="partes-group">
-                    <label><input type="checkbox" name="parte_planta" value="Tallo/Corteza"> Tallo / Corteza</label>
-                    <label><input type="checkbox" name="parte_planta" value="Hojas"> Hojas</label>
-                    <label><input type="checkbox" name="parte_planta" value="Flor"> Flor</label>
-                    <label><input type="checkbox" name="parte_planta" value="Fruto"> Fruto</label>
-                    <label><input type="checkbox" name="parte_planta" value="Raiz"> Raíz</label>
-                </div>
-                <div class="error-message" id="error-partes">Debe seleccionar al menos una parte vegetal.</div>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label>Método de Preparación Principal</label>
-                <div class="options-group">
-                    <label><input type="radio" name="metodo_prep" value="InfusionEste es el código completo que integra la interfaz de usuario (HTML/CSS) y la lógica de validación y conexión a base de datos (JavaScript) utilizando la librería oficial de Supabase. 
-
-El archivo está estructurado como una Single Page Application (SPA) para que puedas copiarlo, guardarlo como un archivo `.html` y ejecutarlo directamente en el navegador.
-
-### Código HTML, CSS y JavaScript (Registro Etnobotánico)
-
-```html
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Registro Etnobotánico</title>
-    <!-- SDK de Supabase -->
-    <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
+    <!-- SDK Oficial de Supabase v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #2e7d32;
-            --secondary: #f1f8e9;
+            --secondary: #e8f5e9;
             --error: #d32f2f;
-            --text: #333;
+            --text: #212121;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f4f6f8;
             color: var(--text);
+            margin: 0;
             padding: 20px;
             display: flex;
             justify-content: center;
         }
         .container {
-            background-color: white;
+            background-color: #ffffff;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 800px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 850px;
             width: 100%;
         }
         header {
-            border-bottom: 2px solid var(--primary);
+            border-bottom: 3px solid var(--primary);
             padding-bottom: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
-        h1 { color: var(--primary); margin: 0 0 5px 0; font-size: 24px; }
-        h2 { color: #555; margin: 0 0 15px 0; font-size: 16px; font-weight: normal; }
+        h1 { color: var(--primary); margin: 0 0 5px 0; font-size: 26px; }
+        h2 { color: #666; margin: 0 0 15px 0; font-size: 16px; font-weight: normal; }
         
         .header-meta {
             display: flex;
             gap: 20px;
             background-color: var(--secondary);
-            padding: 10px;
-            border-radius: 4px;
+            padding: 12px;
+            border-radius: 6px;
+            flex-wrap: wrap;
         }
-        .header-meta label { font-weight: bold; font-size: 14px; }
-        .header-meta input { border: none; background: transparent; font-weight: normal; outline: none; }
+        .header-meta div { font-weight: bold; font-size: 14px; }
+        .header-meta input {
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: normal;
+            color: #333;
+            outline: none;
+        }
         
         fieldset {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
             margin-bottom: 20px;
         }
-        legend { font-weight: bold; color: var(--primary); padding: 0 5px; }
+        legend { font-weight: bold; color: var(--primary); padding: 0 8px; }
         
         .form-group { margin-bottom: 15px; }
-        .form-row { display: flex; gap: 15px; }
-        .form-row .form-group { flex: 1; }
+        .form-row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 200px; }
         
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
         .required::after { content: " *"; color: var(--error); }
         
         input[type="text"], input[type="number"], select, textarea {
-            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
         }
-        textarea { resize: vertical; min-height: 80px; }
+        textarea { resize: vertical; min-height: 90px; }
         
-        .radio-group, .checkbox-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px; }
-        .radio-group label, .checkbox-group label { font-weight: normal; display: flex; align-items: center; gap: 5px; }
+        .radio-group, .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .radio-group label, .checkbox-group label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
         
-        /* Validaciones */
+        /* Validaciones visuales */
         .input-error { border: 2px solid var(--error) !important; background-color: #ffebee; }
-        .error-message { color: var(--error); font-size: 14px; display: none; margin-bottom: 15px; font-weight: bold; padding: 10px; background: #ffebee; border-radius: 4px; }
+        .error-banner {
+            color: var(--error);
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            font-size: 14px;
+            display: none;
+            margin-bottom: 20px;
+            padding: 12px;
+            border-radius: 6px;
+        }
         
-        /* Botones */
-        .actions { display: flex; gap: 15px; margin-top: 20px; }
-        button { padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; transition: 0.3s; }
-        .btn-save { background-color: var(--primary); color: white; font-weight: bold; flex: 2; }
+        /* Botones de comando */
+        .actions { display: flex; gap: 15px; margin-top: 25px; }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-save { background-color: var(--primary); color: white; flex: 2; }
         .btn-save:hover { background-color: #1b5e20; }
         .btn-clear { background-color: #e0e0e0; color: #333; flex: 1; }
-        .btn-clear:hover { background-color: #bdbdbd; }
+        .btn-clear:hover { background-color: #d6d6d6; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- ENCABEZADO -->
     <header>
-        <h1>Sistema de Registro Etnobotánico</h1>
-        <h2>Módulo: Entrevistas Comunitarias</h2>
+        <h1>Sistema de Registro Etnobotánico Comunitario</h1>
+        <h2>Módulo de Captura: Saberes Tradicionales</h2>
         <div class="header-meta">
-            <label>Usuario: <input type="text" id="user_role" value="Estudiante Capturista" readonly></label>
-            <label>Fecha: <input type="date" id="current_date" readonly></label>
+            <div>Rol / Usuario: <input type="text" id="user_role" value="Estudiante Capturista"></div>
+            <div>Fecha: <input type="date" id="current_date" readonly></div>
         </div>
     </header>
 
-    <div id="error_banner" class="error-message">
-        Por favor, corrige los campos resaltados en rojo antes de guardar.
-    </div>
+    <!-- BANNER DE ERRORES DE VALIDACIÓN -->
+    <div id="error_banner" class="error-banner"></div>
 
     <form id="plantForm">
-        <!-- SECCIÓN: Datos Botánicos Maestros -->
+        <!-- CUERPO: DATOS BOTÁNICOS MAESTROS -->
         <fieldset>
             <legend>Datos Botánicos Maestros</legend>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="plant_id" class="required">ID Planta (Folio Único)</label>
-                    <input type="text" id="plant_id" placeholder="Ej: FL-001">
+                    <label for="plant_id" class="required">ID Planta (Clave Única)</label>
+                    <input type="text" id="plant_id" placeholder="Ej: P-001">
                 </div>
                 <div class="form-group">
                     <label for="common_name" class="required">Nombre Común</label>
@@ -343,72 +163,69 @@ El archivo está estructurado como una Single Page Application (SPA) para que pu
                 <div class="form-group">
                     <label for="harvest_season">Época de Cosecha</label>
                     <select id="harvest_season">
-                        <option value="">Seleccione una opción...</option>
                         <option value="Primavera">Primavera</option>
                         <option value="Verano">Verano</option>
                         <option value="Otoño">Otoño</option>
                         <option value="Invierno">Invierno</option>
-                        <option value="Todo el año">Todo el año</option>
+                        <option value="Todo el año" selected>Todo el año</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="soil_type">Tipo de Suelo</label>
                     <select id="soil_type">
-                        <option value="">Seleccione una opción...</option>
                         <option value="Arcilloso">Arcilloso</option>
                         <option value="Arenoso">Arenoso</option>
-                        <option value="Limoso">Limoso</option>
-                        <option value="Mixto">Mixto</option>
+                        <option value="Limoso" selected>Limoso (Fértil)</option>
+                        <option value="Pedregoso">Pedregoso</option>
                     </select>
                 </div>
             </div>
         </fieldset>
 
-        <!-- SECCIÓN: Clasificación Progresiva -->
+        <!-- CLASIFICACIÓN PROGRESIVA Y RECETA -->
         <fieldset>
             <legend>Partes Vegetales y Receta Base</legend>
             <div class="form-group" id="group_parts">
                 <label class="required">Partes de la Planta Registradas</label>
                 <div class="checkbox-group">
                     <label><input type="checkbox" name="plant_parts" value="Tallo/Corteza"> Tallo/Corteza</label>
-                    <label><input type="checkbox" name="plant_parts" value="Hojas"> Hojas</label>
+                    <label><input type="checkbox" name="plant_parts" value="Hojas" checked> Hojas</label>
                     <label><input type="checkbox" name="plant_parts" value="Flor"> Flor</label>
                     <label><input type="checkbox" name="plant_parts" value="Fruto"> Fruto</label>
-                    <label><input type="checkbox" name="plant_parts" value="Raiz"> Raíz</label>
+                    <label><input type="checkbox" name="plant_parts" value="Raíz"> Raíz</label>
                 </div>
             </div>
 
             <div class="form-group">
                 <label>Método de Preparación Principal</label>
                 <div class="radio-group">
-                    <label><input type="radio" name="prep_method" value="Infusion" checked> Infusión (Té)</label>
-                    <label><input type="radio" name="prep_method" value="Pomada"> Pomada / Ungüento</label>
-                    <label><input type="radio" name="prep_method" value="Tintura"> Tintura (Alcohol)</label>
+                    <label><input type="radio" name="prep_method" value="Infusión" checked> Infusión</label>
+                    <label><input type="radio" name="prep_method" value="Pomada"> Pomada</label>
+                    <label><input type="radio" name="prep_method" value="Tintura"> Tintura</label>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="dose_g" class="required">Dosis Planta ($g$)</label>
-                    <input type="number" id="dose_g" step="0.1" min="0" placeholder="Gramos exactos">
+                    <label for="dose_g" class="required">Dosis Planta (g)</label>
+                    <input type="number" id="dose_g" step="0.1" min="0.1" placeholder="Gramos">
                 </div>
                 <div class="form-group">
-                    <label for="dose_ml" class="required">Volumen Solvente ($ml$)</label>
-                    <input type="number" id="dose_ml" step="1" min="0" placeholder="Mililitros (Agua/Alcohol)">
+                    <label for="dose_ml" class="required">Volumen Solvente (ml)</label>
+                    <input type="number" id="dose_ml" step="1" min="1" placeholder="Mililitros">
                 </div>
             </div>
         </fieldset>
 
-        <!-- SECCIÓN: Bioseguridad -->
+        <!-- BIOSEGURIDAD Y RESTRICCIONES -->
         <fieldset>
             <legend>Bioseguridad y Restricciones</legend>
             <div class="form-group">
                 <label>Nivel de Toxicidad Conocida</label>
                 <div class="radio-group">
-                    <!-- Valor Seguro por Defecto -->
-                    <label><input type="radio" name="toxicity" value="Baja/Nula" checked> Nula / Baja (Segura)</label>
-                    <label><input type="radio" name="toxicity" value="Media"> Media (Requiere precaución)</label>
-                    <label><input type="radio" name="toxicity" value="Alta"> Alta (Uso muy restringido)</label>
+                    <label><input type="radio" name="toxicity" value="Baja/Nula" checked> Baja / Nula (Seguro)</label>
+                    <label><input type="radio" name="toxicity" value="Media"> Media (Precaución)</label>
+                    <label><input type="radio" name="toxicity" value="Alta"> Alta (Restringido)</label>
                 </div>
             </div>
 
@@ -416,139 +233,142 @@ El archivo está estructurado como una Single Page Application (SPA) para que pu
                 <label>Contraindicaciones (Grupos de Riesgo)</label>
                 <div class="checkbox-group">
                     <label><input type="checkbox" name="contraindications" value="Embarazo"> Embarazo/Lactancia</label>
-                    <label><input type="checkbox" name="contraindications" value="Infantes"> Niños pequeños</label>
+                    <label><input type="checkbox" name="contraindications" value="Infantes"> Infantes</label>
                     <label><input type="checkbox" name="contraindications" value="Tercera Edad"> Tercera Edad</label>
-                    <label><input type="checkbox" name="contraindications" value="Hipertension"> Hipertensión</label>
+                    <label><input type="checkbox" name="contraindications" value="Hipertensión"> Hipertensión</label>
                 </div>
             </div>
         </fieldset>
 
-        <!-- SECCIÓN: Comentarios y Acción -->
+        <!-- COMENTARIOS Y ACCIÓN -->
         <fieldset>
-            <legend>Comentarios e Historias Comunitarias</legend>
+            <legend>Historias Comunitarias y Observaciones</legend>
             <div class="form-group">
-                <label for="comments">Observaciones cualitativas (Saberes del Entrevistado)</label>
-                <textarea id="comments" placeholder="Escriba aquí anécdotas, instrucciones detalladas, o creencias culturales asociadas a la planta..."></textarea>
+                <label for="comments">Comentarios Cualitativos del Sabio Entrevistado</label>
+                <textarea id="comments" placeholder="Ingrese historias, contexto cultural o instrucciones detalladas..."></textarea>
             </div>
         </fieldset>
 
         <div class="actions">
-            <button type="button" class="btn-clear" onclick="resetForm()">Cancelar / Limpiar</button>
+            <button type="button" class="btn-clear" onclick="resetForm()">Limpiar Formulario</button>
             <button type="submit" class="btn-save">Guardar Registro Botánico</button>
         </div>
     </form>
 </div>
 
 <script>
-    // 1. CONFIGURACIÓN DE SUPABASE
-    // Reemplaza estas credenciales con las de tu proyecto en Supabase
-    const SUPABASE_URL = 'https://cjvkrimxllicwzqgcpad.supabase.co'; 
+    // 1. INICIALIZACIÓN DE SUPABASE
+    const SUPABASE_URL = 'https://cjvkrimxllicwzqgcpad.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdmtyaW14bGxpY3d6cWdjcGFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMTI5NDUsImV4cCI6MjEwNTc4ODk0NX0.IZjUeLHMwdIQpjPcNlHWCrtN9fBDG3OlHKf8P7cLSfg';
+    
+    // Crear cliente de Supabase
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. INICIALIZACIÓN DE FECHA AUTOMÁTICA
-    const setDate = () => {
-        document.getElementById('current_date').valueAsDate = new Date();
-    };
-    window.onload = setDate;
+    // 2. FECHA AUTOMÁTICA
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
+    });
 
-    // 3. LÓGICA DE VALIDACIÓN Y CONTROL DE CALIDAD
+    // 3. ENVÍO Y VALIDACIÓN DE DATOS
     const form = document.getElementById('plantForm');
     const errorBanner = document.getElementById('error_banner');
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Evita recargar la página
-        let isValid = true;
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-        // Limpiar errores previos
-        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+        // Resetear mensajes de error previos
         errorBanner.style.display = 'none';
+        errorBanner.innerHTML = '';
+        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
         document.getElementById('group_parts').classList.remove('input-error');
 
-        // Referencias a campos obligatorios
-        const idField = document.getElementById('plant_id');
-        const nameField = document.getElementById('common_name');
-        const parts = document.querySelectorAll('input[name="plant_parts"]:checked');
-        const doseG = document.getElementById('dose_g');
-        const doseMl = document.getElementById('dose_ml');
+        // Captura de valores
+        const plantId = document.getElementById('plant_id').value.trim();
+        const commonName = document.getElementById('common_name').value.trim();
+        const partsChecked = Array.from(document.querySelectorAll('input[name="plant_parts"]:checked')).map(cb => cb.value);
+        const doseG = parseFloat(document.getElementById('dose_g').value);
+        const doseMl = parseFloat(document.getElementById('dose_ml').value);
 
-        // Validar ID
-        if (!idField.value.trim()) {
-            idField.classList.add('input-error');
-            isValid = false;
-        }
-        
-        // Validar Nombre Común
-        if (!nameField.value.trim()) {
-            nameField.classList.add('input-error');
-            isValid = false;
-        }
+        let errors = [];
 
-        // Validar Partes Registradas (Mínimo 1)
-        if (parts.length === 0) {
+        // Validaciones en cliente
+        if (!plantId) {
+            document.getElementById('plant_id').classList.add('input-error');
+            errors.push("El <strong>ID Planta</strong> es obligatorio.");
+        }
+        if (!commonName) {
+            document.getElementById('common_name').classList.add('input-error');
+            errors.push("El <strong>Nombre Común</strong> es obligatorio.");
+        }
+        if (partsChecked.length === 0) {
             document.getElementById('group_parts').classList.add('input-error');
-            isValid = false;
+            errors.push("Debe seleccionar al menos una <strong>Parte de la Planta</strong>.");
+        }
+        if (isNaN(doseG) || doseG <= 0) {
+            document.getElementById('dose_g').classList.add('input-error');
+            errors.push("Ingrese una <strong>Dosis en gramos</strong> mayor a 0.");
+        }
+        if (isNaN(doseMl) || doseMl <= 0) {
+            document.getElementById('dose_ml').classList.add('input-error');
+            errors.push("Ingrese un <strong>Volumen en ml</strong> mayor a 0.");
         }
 
-        // Validar Dosis y formato numérico (El HTML ya fuerza input type="number")
-        if (!doseG.value || doseG.value <= 0) {
-            doseG.classList.add('input-error');
-            isValid = false;
-        }
-        if (!doseMl.value || doseMl.value <= 0) {
-            doseMl.classList.add('input-error');
-            isValid = false;
-        }
-
-        // Si hay errores, detener proceso y mostrar alerta visual
-        if (!isValid) {
+        // Si existen errores, mostrarlos inmediatamente
+        if (errors.length > 0) {
+            errorBanner.innerHTML = "Por favor corrige los siguientes campos antes de guardar:<br>• " + errors.join("<br>• ");
             errorBanner.style.display = 'block';
-            errorBanner.scrollIntoView({ behavior: "smooth" });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
-        // 4. RECOLECCIÓN Y ENVÍO DE DATOS A SUPABASE
-        // Extraer arrays de checkboxes
-        const selectedParts = Array.from(parts).map(cb => cb.value);
-        const selectedContra = Array.from(document.querySelectorAll('input[name="contraindications"]:checked')).map(cb => cb.value);
+        // Estructura de datos normalizada para Supabase
+        const prepMethod = document.querySelector('input[name="prep_method"]:checked')?.value || 'Infusión';
+        const toxicity = document.querySelector('input[name="toxicity"]:checked')?.value || 'Baja/Nula';
+        const contraChecked = Array.from(document.querySelectorAll('input[name="contraindications"]:checked')).map(cb => cb.value);
 
         const recordData = {
-            plant_id: idField.value.trim(),
-            common_name: nameField.value.trim(),
+            plant_id: plantId,
+            common_name: commonName,
             scientific_name: document.getElementById('scientific_name').value.trim(),
             harvest_season: document.getElementById('harvest_season').value,
             soil_type: document.getElementById('soil_type').value,
-            plant_parts: selectedParts, // Se guarda como Array (JSON/Text Array en BD)
-            prep_method: document.querySelector('input[name="prep_method"]:checked').value,
-            dose_g: parseFloat(doseG.value),
-            dose_ml: parseFloat(doseMl.value),
-            toxicity: document.querySelector('input[name="toxicity"]:checked').value,
-            contraindications: selectedContra, // Array
+            plant_parts: partsChecked.join(', '), // Convertido a cadena separada por comas
+            prep_method: prepMethod,
+            dose_g: doseG,
+            dose_ml: doseMl,
+            toxicity: toxicity,
+            contraindications: contraChecked.join(', '), // Convertido a cadena
             comments: document.getElementById('comments').value.trim(),
-            recorded_by: document.getElementById('user_role').value,
+            recorded_by: document.getElementById('user_role').value.trim(),
             recorded_at: document.getElementById('current_date').value
         };
 
+        console.log("Enviando registro a Supabase...", recordData);
+
         try {
-            // Reemplaza 'etnobotanica_registros' con el nombre exacto de tu tabla
+            // Guardar registro en la tabla de Supabase
             const { data, error } = await supabase
                 .from('etnobotanica_registros')
-                .insert([recordData]);
+                .insert([recordData])
+                .select();
 
-            if (error) throw error;
-
-            alert("¡Registro guardado exitosamente en la base de datos comunitaria!");
-            resetForm();
-            
-        } catch (error) {
-            console.error(error);
-            alert("Error al conectar con la base de datos: " + error.message);
+            if (error) {
+                console.error("Error devuelto por Supabase:", error);
+                alert("Error al guardar en Supabase:\n" + error.message + "\n\nSugerencia: " + (error.hint || "Verifique que ejecutó el SQL del Paso 1."));
+            } else {
+                console.log("Respuesta de inserción exitosa:", data);
+                alert("¡El registro de la planta '" + commonName + "' fue guardado con éxito en Supabase!");
+                resetForm();
+            }
+        } catch (err) {
+            console.error("Excepción inesperada:", err);
+            alert("Ocurrió un error inesperado de conexión: " + err.message);
         }
     });
 
     function resetForm() {
         form.reset();
-        setDate(); // Restaurar fecha tras borrar
+        document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
         errorBanner.style.display = 'none';
         document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
     }
