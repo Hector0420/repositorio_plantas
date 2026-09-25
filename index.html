@@ -1,796 +1,377 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Herbario Comunitario · Registro de Plantas Medicinales</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  :root{
-    --verde:#1f6f43; --verde-2:#155236; --verde-claro:#e9f5ee;
-    --rojo:#c62828;  --rojo-claro:#fdecea;
-    --gris:#5b6472;  --borde:#cfd8dc; --fondo:#f2f6f3; --texto:#1c2b23;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-    background:var(--fondo); color:var(--texto); line-height:1.45;
-    padding-bottom:48px;
-  }
-
-  /* ---------- ENCABEZADO ---------- */
-  .app-header{
-    position:sticky; top:0; z-index:20;
-    background:var(--verde); color:#fff;
-    padding:10px 16px; display:flex; flex-wrap:wrap; gap:14px;
-    justify-content:space-between; align-items:center;
-    box-shadow:0 2px 10px rgba(0,0,0,.22);
-  }
-  .marca h1{font-size:1.05rem;margin:0;letter-spacing:.2px}
-  .marca p{margin:2px 0 0;font-size:.78rem;opacity:.88}
-  .datos-sesion{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
-  .datos-sesion label{
-    display:flex;flex-direction:column;gap:3px;
-    font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;
-  }
-  .datos-sesion input,.datos-sesion select{
-    padding:6px 8px;border:1px solid rgba(255,255,255,.55);border-radius:7px;
-    background:rgba(255,255,255,.15);color:#fff;font-size:.85rem;
-    min-width:160px;font-family:inherit;text-transform:none;letter-spacing:0;
-  }
-  .datos-sesion input::placeholder{color:rgba(255,255,255,.75)}
-  .datos-sesion select option{color:#111;background:#fff}
-  .datos-sesion input[readonly]{opacity:.85}
-  .datos-sesion .campo-error input,
-  .datos-sesion .campo-error select{
-    border-color:#ffb4a8;background:rgba(198,40,40,.5);
-  }
-  .datos-sesion .error-msg{color:#ffd9d4;font-size:.7rem;text-transform:none;letter-spacing:0}
-
-  /* ---------- CUERPO ---------- */
-  main{max-width:1080px;margin:18px auto;padding:0 14px;display:grid;gap:16px}
-
-  #bannerConfig{
-    display:none;background:#fff4e5;border:1px solid #ffb74d;color:#7a4a00;
-    padding:12px 16px;border-radius:10px;font-size:.86rem;
-  }
-  #bannerConfig code{background:#fff;padding:1px 5px;border-radius:4px}
-
-  .nota-campos{
-    font-size:.78rem;color:var(--gris);margin:0;padding:0 4px;
-  }
-
-  fieldset{
-    background:#fff;border:1px solid var(--borde);border-radius:12px;
-    padding:14px 16px 18px;margin:0;
-  }
-  legend{font-weight:700;color:var(--verde-2);padding:0 8px;font-size:.95rem}
-
-  .rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
-  .grupo{display:flex;flex-direction:column;gap:5px}
-  .grupo + .grupo{margin-top:0}
-  .bloque{margin-top:16px}
-  .etiqueta{font-size:.8rem;font-weight:600;color:#37503f}
-  .req{color:var(--rojo);font-weight:800}
-
-  input[type=text],input[type=date],input[type=number],select,textarea{
-    width:100%;padding:9px 10px;border:1px solid var(--borde);border-radius:8px;
-    font-size:.9rem;background:#fff;color:var(--texto);font-family:inherit;
-  }
-  textarea{resize:vertical;min-height:120px}
-  input:focus,select:focus,textarea:focus{
-    outline:2px solid var(--verde);outline-offset:1px;border-color:var(--verde);
-  }
-  input[readonly]{background:#eef2ef;color:var(--gris)}
-
-  .opciones{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{
-    display:inline-flex;align-items:center;gap:6px;
-    border:1px solid var(--borde);border-radius:999px;
-    padding:6px 12px;font-size:.85rem;background:#fbfdfb;cursor:pointer;
-    user-select:none;
-  }
-  .chip input{accent-color:var(--verde);margin:0}
-  .chip:hover{background:var(--verde-claro)}
-  .chip:has(input:checked){
-    background:var(--verde-claro);border-color:var(--verde);
-    color:var(--verde-2);font-weight:600;
-  }
-
-  /* ---------- ERRORES ---------- */
-  .campo-error input,.campo-error select,.campo-error textarea{
-    border-color:var(--rojo)!important;background:var(--rojo-claro)!important;
-  }
-  .campo-error .chip{border-color:var(--rojo);background:var(--rojo-claro)}
-  .campo-error .etiqueta{color:var(--rojo)}
-  .error-msg{color:var(--rojo);font-size:.75rem;margin:0}
-  .error-msg:empty{display:none}
-  .contador{font-size:.72rem;color:var(--gris);text-align:right}
-
-  /* ---------- ACCIONES ---------- */
-  .acciones{
-    display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;
-    padding:4px 0;align-items:center;
-  }
-  .acciones .aviso-guardado{margin-right:auto;font-size:.78rem;color:var(--gris)}
-  button{
-    font-family:inherit;font-size:.92rem;border-radius:9px;padding:11px 24px;
-    cursor:pointer;border:1px solid transparent;font-weight:600;
-    transition:background .15s,opacity .15s;
-  }
-  .btn-primario{background:var(--verde);color:#fff;box-shadow:0 3px 10px rgba(31,111,67,.35)}
-  .btn-primario:hover:not(:disabled){background:var(--verde-2)}
-  .btn-primario:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
-  .btn-secundario{background:#fff;border-color:var(--borde);color:var(--gris)}
-  .btn-secundario:hover{background:#eef2ef}
-
-  /* ---------- AVISOS ---------- */
-  #aviso{
-    position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:60;
-    display:flex;flex-direction:column;gap:8px;width:min(560px,92vw);
-  }
-  .toast{
-    padding:12px 16px;border-radius:10px;color:#fff;font-size:.88rem;
-    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:opacity .3s;
-    animation:subir .2s ease;
-  }
-  .toast.ok{background:#1f6f43}
-  .toast.err{background:#b3261e}
-  .toast.info{background:#37474f}
-  @keyframes subir{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-
-  @media (max-width:640px){
-    .marca h1{font-size:.95rem}
-    .datos-sesion{width:100%}
-    .datos-sesion label{flex:1 1 130px}
-    .datos-sesion input,.datos-sesion select{min-width:0;width:100%}
-    .acciones{justify-content:stretch}
-    .acciones button{flex:1 1 100%}
-    .acciones .aviso-guardado{flex:1 1 100%}
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Registro Etnobotánico</title>
+    <!-- SDK Oficial de Supabase v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --secondary: #e8f5e9;
+            --error: #d32f2f;
+            --text: #212121;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 850px;
+            width: 100%;
+        }
+        header {
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        h1 { color: var(--primary); margin: 0 0 5px 0; font-size: 26px; }
+        h2 { color: #666; margin: 0 0 15px 0; font-size: 16px; font-weight: normal; }
+        
+        .header-meta {
+            display: flex;
+            gap: 20px;
+            background-color: var(--secondary);
+            padding: 12px;
+            border-radius: 6px;
+            flex-wrap: wrap;
+        }
+        .header-meta div { font-weight: bold; font-size: 14px; }
+        .header-meta input {
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: normal;
+            color: #333;
+            outline: none;
+        }
+        
+        fieldset {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        legend { font-weight: bold; color: var(--primary); padding: 0 8px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 200px; }
+        
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+        .required::after { content: " *"; color: var(--error); }
+        
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        textarea { resize: vertical; min-height: 90px; }
+        
+        .radio-group, .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .radio-group label, .checkbox-group label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        
+        /* Validaciones visuales */
+        .input-error { border: 2px solid var(--error) !important; background-color: #ffebee; }
+        .error-banner {
+            color: var(--error);
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            font-size: 14px;
+            display: none;
+            margin-bottom: 20px;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        
+        /* Botones de comando */
+        .actions { display: flex; gap: 15px; margin-top: 25px; }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-save { background-color: var(--primary); color: white; flex: 2; }
+        .btn-save:hover { background-color: #1b5e20; }
+        .btn-clear { background-color: #e0e0e0; color: #333; flex: 1; }
+        .btn-clear:hover { background-color: #d6d6d6; }
+    </style>
 </head>
 <body>
 
-<!-- ============================================================
-     SECCIÓN 1 · ENCABEZADO
-     ============================================================ -->
-<header class="app-header">
-  <div class="marca">
-    <h1>Sistema de Registro Etnobotánico Comunitario</h1>
-    <p>Módulo: Captura de plantas medicinales y saberes comunitarios</p>
-  </div>
-
-  <div class="datos-sesion">
-    <label data-grupo="usuario">Usuario <span class="req">*</span>
-      <input id="usuario" name="usuario" form="formPlanta" type="text"
-             maxlength="60" placeholder="Nombre del estudiante" autocomplete="name">
-      <span class="error-msg" data-err="usuario"></span>
-    </label>
-
-    <label data-grupo="rol">Rol <span class="req">*</span>
-      <select id="rol" name="rol" form="formPlanta">
-        <option value="Estudiante" selected>Estudiante</option>
-        <option value="Docente">Docente</option>
-        <option value="Promotor comunitario">Promotor comunitario</option>
-      </select>
-      <span class="error-msg" data-err="rol"></span>
-    </label>
-
-    <label>Fecha
-      <input id="fecha" name="fecha" form="formPlanta" type="date"
-             readonly tabindex="-1" title="Se captura automáticamente del reloj del equipo">
-    </label>
-  </div>
-</header>
-
-<main>
-
-  <div id="bannerConfig">
-    <strong>⚠ Configuración pendiente:</strong> abra el archivo <code>index.html</code> y reemplace
-    <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> por los datos de su proyecto
-    (Supabase → Project Settings → API). Mientras no lo haga, el botón <em>Guardar registro</em>
-    permanecerá deshabilitado.
-  </div>
-
-  <p class="nota-campos">Los campos marcados con <span class="req">*</span> son obligatorios.
-     Las listas, casillas y botones de opción ya traen valores sugeridos para agilizar la captura.</p>
-
-  <form id="formPlanta" novalidate autocomplete="off">
-
-    <!-- ========================================================
-         SECCIÓN 2.1 · DATOS BOTÁNICOS MAESTROS
-         ======================================================== -->
-    <fieldset>
-      <legend>1 · Datos botánicos maestros</legend>
-      <div class="rejilla">
-
-        <div class="grupo" data-grupo="id_planta">
-          <label class="etiqueta" for="id_planta">ID Planta <span class="req">*</span></label>
-          <input id="id_planta" name="id_planta" type="text" maxlength="20"
-                 placeholder="Ej. PL-001" autocomplete="off">
-          <p class="error-msg" data-err="id_planta"></p>
+<div class="container">
+    <!-- ENCABEZADO -->
+    <header>
+        <h1>Sistema de Registro Etnobotánico Comunitario</h1>
+        <h2>Módulo de Captura: Saberes Tradicionales</h2>
+        <div class="header-meta">
+            <div>Rol / Usuario: <input type="text" id="user_role" value="Estudiante Capturista"></div>
+            <div>Fecha: <input type="date" id="current_date" readonly></div>
         </div>
+    </header>
 
-        <div class="grupo" data-grupo="nombre_comun">
-          <label class="etiqueta" for="nombre_comun">Nombre común <span class="req">*</span></label>
-          <input id="nombre_comun" name="nombre_comun" type="text" maxlength="80"
-                 placeholder="Ej. Manzanilla" autocomplete="off">
-          <p class="error-msg" data-err="nombre_comun"></p>
+    <!-- BANNER DE ERRORES DE VALIDACIÓN -->
+    <div id="error_banner" class="error-banner"></div>
+
+    <form id="plantForm">
+        <!-- CUERPO: DATOS BOTÁNICOS MAESTROS -->
+        <fieldset>
+            <legend>Datos Botánicos Maestros</legend>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="plant_id" class="required">ID Planta (Clave Única)</label>
+                    <input type="text" id="plant_id" placeholder="Ej: P-001">
+                </div>
+                <div class="form-group">
+                    <label for="common_name" class="required">Nombre Común</label>
+                    <input type="text" id="common_name" placeholder="Ej: Manzanilla">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="scientific_name">Nombre Científico</label>
+                    <input type="text" id="scientific_name" placeholder="Ej: Matricaria chamomilla">
+                </div>
+                <div class="form-group">
+                    <label for="harvest_season">Época de Cosecha</label>
+                    <select id="harvest_season">
+                        <option value="Primavera">Primavera</option>
+                        <option value="Verano">Verano</option>
+                        <option value="Otoño">Otoño</option>
+                        <option value="Invierno">Invierno</option>
+                        <option value="Todo el año" selected>Todo el año</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="soil_type">Tipo de Suelo</label>
+                    <select id="soil_type">
+                        <option value="Arcilloso">Arcilloso</option>
+                        <option value="Arenoso">Arenoso</option>
+                        <option value="Limoso" selected>Limoso (Fértil)</option>
+                        <option value="Pedregoso">Pedregoso</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- CLASIFICACIÓN PROGRESIVA Y RECETA -->
+        <fieldset>
+            <legend>Partes Vegetales y Receta Base</legend>
+            <div class="form-group" id="group_parts">
+                <label class="required">Partes de la Planta Registradas</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="plant_parts" value="Tallo/Corteza"> Tallo/Corteza</label>
+                    <label><input type="checkbox" name="plant_parts" value="Hojas" checked> Hojas</label>
+                    <label><input type="checkbox" name="plant_parts" value="Flor"> Flor</label>
+                    <label><input type="checkbox" name="plant_parts" value="Fruto"> Fruto</label>
+                    <label><input type="checkbox" name="plant_parts" value="Raíz"> Raíz</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Método de Preparación Principal</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="prep_method" value="Infusión" checked> Infusión</label>
+                    <label><input type="radio" name="prep_method" value="Pomada"> Pomada</label>
+                    <label><input type="radio" name="prep_method" value="Tintura"> Tintura</label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="dose_g" class="required">Dosis Planta (g)</label>
+                    <input type="number" id="dose_g" step="0.1" min="0.1" placeholder="Gramos">
+                </div>
+                <div class="form-group">
+                    <label for="dose_ml" class="required">Volumen Solvente (ml)</label>
+                    <input type="number" id="dose_ml" step="1" min="1" placeholder="Mililitros">
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- BIOSEGURIDAD Y RESTRICCIONES -->
+        <fieldset>
+            <legend>Bioseguridad y Restricciones</legend>
+            <div class="form-group">
+                <label>Nivel de Toxicidad Conocida</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="toxicity" value="Baja/Nula" checked> Baja / Nula (Seguro)</label>
+                    <label><input type="radio" name="toxicity" value="Media"> Media (Precaución)</label>
+                    <label><input type="radio" name="toxicity" value="Alta"> Alta (Restringido)</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Contraindicaciones (Grupos de Riesgo)</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="contraindications" value="Embarazo"> Embarazo/Lactancia</label>
+                    <label><input type="checkbox" name="contraindications" value="Infantes"> Infantes</label>
+                    <label><input type="checkbox" name="contraindications" value="Tercera Edad"> Tercera Edad</label>
+                    <label><input type="checkbox" name="contraindications" value="Hipertensión"> Hipertensión</label>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- COMENTARIOS Y ACCIÓN -->
+        <fieldset>
+            <legend>Historias Comunitarias y Observaciones</legend>
+            <div class="form-group">
+                <label for="comments">Comentarios Cualitativos del Sabio Entrevistado</label>
+                <textarea id="comments" placeholder="Ingrese historias, contexto cultural o instrucciones detalladas..."></textarea>
+            </div>
+        </fieldset>
+
+        <div class="actions">
+            <button type="button" class="btn-clear" onclick="resetForm()">Limpiar Formulario</button>
+            <button type="submit" class="btn-save">Guardar Registro Botánico</button>
         </div>
-
-        <div class="grupo" data-grupo="nombre_cientifico">
-          <label class="etiqueta" for="nombre_cientifico">Nombre científico</label>
-          <input id="nombre_cientifico" name="nombre_cientifico" type="text" maxlength="100"
-                 placeholder="Ej. Matricaria chamomilla" autocomplete="off">
-          <p class="error-msg" data-err="nombre_cientifico"></p>
-        </div>
-
-        <div class="grupo" data-grupo="epoca_cosecha">
-          <label class="etiqueta" for="epoca_cosecha">Época de cosecha</label>
-          <select id="epoca_cosecha" name="epoca_cosecha">
-            <option value="">— Seleccione —</option>
-            <option value="Todo el año" selected>Todo el año</option>
-            <option value="Primavera">Primavera</option>
-            <option value="Verano">Verano</option>
-            <option value="Otoño">Otoño</option>
-            <option value="Invierno">Invierno</option>
-            <option value="Temporada de lluvias">Temporada de lluvias</option>
-            <option value="Temporada seca">Temporada seca</option>
-            <option value="No identificada">No identificada</option>
-          </select>
-          <p class="error-msg" data-err="epoca_cosecha"></p>
-        </div>
-
-        <div class="grupo" data-grupo="tipo_suelo">
-          <label class="etiqueta" for="tipo_suelo">Tipo de suelo</label>
-          <select id="tipo_suelo" name="tipo_suelo">
-            <option value="">— Seleccione —</option>
-            <option value="Arcilloso">Arcilloso</option>
-            <option value="Arenoso">Arenoso</option>
-            <option value="Limoso">Limoso</option>
-            <option value="Franco (equilibrado)" selected>Franco (equilibrado)</option>
-            <option value="Humífero / orgánico">Humífero / orgánico</option>
-            <option value="Pedregoso">Pedregoso</option>
-            <option value="Volcánico">Volcánico</option>
-            <option value="Salino">Salino</option>
-            <option value="No identificado">No identificado</option>
-          </select>
-          <p class="error-msg" data-err="tipo_suelo"></p>
-        </div>
-
-      </div>
-    </fieldset>
-
-    <!-- ========================================================
-         SECCIÓN 2.2 · PARTES VEGETALES Y RECETA
-         ======================================================== -->
-    <fieldset class="bloque">
-      <legend>2 · Clasificación por partes vegetales y receta</legend>
-
-      <div class="grupo" data-grupo="partes">
-        <span class="etiqueta">Partes de la planta <span class="req">*</span>
-          <small style="font-weight:400">(puede marcar una o varias)</small>
-        </span>
-        <div class="opciones">
-          <label class="chip"><input type="checkbox" name="partes" value="Tallo/Corteza"> Tallo / Corteza</label>
-          <label class="chip"><input type="checkbox" name="partes" value="Hojas"> Hojas</label>
-          <label class="chip"><input type="checkbox" name="partes" value="Flor"> Flor</label>
-          <label class="chip"><input type="checkbox" name="partes" value="Fruto"> Fruto</label>
-        </div>
-        <p class="error-msg" data-err="partes"></p>
-      </div>
-
-      <div class="grupo bloque" data-grupo="metodo_preparacion">
-        <span class="etiqueta">Método de preparación <span class="req">*</span>
-          <small style="font-weight:400">(una sola opción)</small>
-        </span>
-        <div class="opciones">
-          <label class="chip"><input type="radio" name="metodo_preparacion" value="Infusión" checked> Infusión</label>
-          <label class="chip"><input type="radio" name="metodo_preparacion" value="Pomada"> Pomada</label>
-          <label class="chip"><input type="radio" name="metodo_preparacion" value="Tintura"> Tintura</label>
-        </div>
-        <p class="error-msg" data-err="metodo_preparacion"></p>
-      </div>
-
-      <div class="bloque">
-        <span class="etiqueta">Receta base estandarizada <span class="req">*</span>
-          <small style="font-weight:400">(registre al menos una cantidad, en dígitos)</small>
-        </span>
-        <div class="rejilla" style="margin-top:8px">
-
-          <div class="grupo" data-grupo="dosis_gramos">
-            <label class="etiqueta" for="dosis_gramos">Dosis en gramos (g)</label>
-            <input id="dosis_gramos" name="dosis_gramos" class="solo-numero"
-                   type="text" inputmode="decimal" maxlength="8"
-                   placeholder="Ej. 15" autocomplete="off">
-            <p class="error-msg" data-err="dosis_gramos"></p>
-          </div>
-
-          <div class="grupo" data-grupo="dosis_ml">
-            <label class="etiqueta" for="dosis_ml">Dosis en mililitros (ml)</label>
-            <input id="dosis_ml" name="dosis_ml" class="solo-numero"
-                   type="text" inputmode="decimal" maxlength="8"
-                   placeholder="Ej. 250" autocomplete="off">
-            <p class="error-msg" data-err="dosis_ml"></p>
-          </div>
-
-        </div>
-      </div>
-    </fieldset>
-
-    <!-- ========================================================
-         SECCIÓN 2.3 · BIOSEGURIDAD
-         ======================================================== -->
-    <fieldset class="bloque">
-      <legend>3 · Bioseguridad y restricciones</legend>
-
-      <div class="grupo" data-grupo="toxicidad">
-        <span class="etiqueta">Nivel de toxicidad <span class="req">*</span></span>
-        <div class="opciones">
-          <label class="chip"><input type="radio" name="toxicidad" value="Nula"> Nula / no reportada</label>
-          <label class="chip"><input type="radio" name="toxicidad" value="Baja" checked> Baja</label>
-          <label class="chip"><input type="radio" name="toxicidad" value="Media"> Media</label>
-          <label class="chip"><input type="radio" name="toxicidad" value="Alta"> Alta</label>
-        </div>
-        <p class="error-msg" data-err="toxicidad"></p>
-      </div>
-
-      <div class="grupo bloque" data-grupo="contraindicaciones">
-        <span class="etiqueta">Contraindicaciones / grupos de riesgo
-          <small style="font-weight:400">(marque “Ninguna” si no aplica)</small>
-        </span>
-        <div class="opciones">
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Embarazo"> Embarazo</label>
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Lactancia"> Lactancia</label>
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Menores de 12 años"> Menores de 12 años</label>
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Adultos mayores"> Adultos mayores</label>
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Hipertensión"> Hipertensión</label>
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Diabetes"> Diabetes</label>
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Anticoagulantes"> Uso de anticoagulantes</label>
-          <label class="chip"><input type="checkbox" name="contraindicaciones" value="Alergias conocidas"> Alergias conocidas</label>
-          <label class="chip"><input type="checkbox" id="contraNinguna" name="contraindicaciones" value="Ninguna" checked> Ninguna</label>
-        </div>
-        <p class="error-msg" data-err="contraindicaciones"></p>
-      </div>
-    </fieldset>
-
-    <!-- ========================================================
-         SECCIÓN 3 · COMENTARIOS Y ACCIÓN
-         ======================================================== -->
-    <fieldset class="bloque">
-      <legend>4 · Comentarios e instrucciones</legend>
-
-      <div class="grupo" data-grupo="observaciones">
-        <label class="etiqueta" for="observaciones">
-          Observaciones cualitativas, instrucciones de uso o historias del sabio entrevistado
-        </label>
-        <textarea id="observaciones" name="observaciones" maxlength="1500"
-                  placeholder="Escriba aquí los comentarios, la forma de uso tradicional, la fuente del saber, etc."></textarea>
-        <span class="contador" id="contadorObs">0 / 1500</span>
-        <p class="error-msg" data-err="observaciones"></p>
-      </div>
-
-      <div class="acciones bloque">
-        <span class="aviso-guardado">Revise los datos antes de guardar. El registro se almacena en la nube.</span>
-        <button type="button" class="btn-secundario" id="btnLimpiar">Limpiar formulario</button>
-        <button type="submit" class="btn-primario" id="btnGuardar">Guardar registro</button>
-      </div>
-    </fieldset>
-
-  </form>
-</main>
-
-<div id="aviso" aria-live="polite" aria-atomic="false"></div>
+    </form>
+</div>
 
 <script>
-(function () {
-  "use strict";
+    // 1. INICIALIZACIÓN DE SUPABASE
+    const SUPABASE_URL = 'https://cjvkrimxllicwzqgcpad.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdmtyaW14bGxpY3d6cWdjcGFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMTI5NDUsImV4cCI6MjEwNTc4ODk0NX0.IZjUeLHMwdIQpjPcNlHWCrtN9fBDG3OlHKf8P7cLSfg';
+    
+    // Crear cliente de Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  /* ============================================================
-     1) CONFIGURACIÓN DE SUPABASE
-        Reemplace los dos valores por los de su proyecto.
-        NUNCA use aquí la clave "service_role".
-     ============================================================ */
-  var SUPABASE_URL      = "https://cjvkrimxllicwzqgcpad.supabase.co";
-  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdmtyaW14bGxpY3d6cWdjcGFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMTI5NDUsImV4cCI6MjEwNTc4ODk0NX0.IZjUeLHMwdIQpjPcNlHWCrtN9fBDG3OlHKf8P7cLSfg";
-
-  var CONFIG_OK =
-    SUPABASE_URL.indexOf("https://cjvkrimxllicwzqgcpad.supabase.co") === -1 &&
-    SUPABASE_ANON_KEY.indexOf("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdmtyaW14bGxpY3d6cWdjcGFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMTI5NDUsImV4cCI6MjEwNTc4ODk0NX0.IZjUeLHMwdIQpjPcNlHWCrtN9fBDG3OlHKf8P7cLSfg") === -1 &&
-    typeof window.supabase !== "undefined";
-
-  var sb = null;
-  if (CONFIG_OK) {
-    /* Se usa el nombre "sb" para NO pisar el objeto global "supabase" del CDN */
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-
-  /* ============================================================
-     2) REFERENCIAS DEL DOM
-     ============================================================ */
-  var form       = document.getElementById("formPlanta");
-  var inputFecha = document.getElementById("fecha");
-  var btnGuardar = document.getElementById("btnGuardar");
-  var btnLimpiar = document.getElementById("btnLimpiar");
-  var banner     = document.getElementById("bannerConfig");
-  var avisos     = document.getElementById("aviso");
-  var textarea   = document.getElementById("observaciones");
-  var contador   = document.getElementById("contadorObs");
-
-  if (!CONFIG_OK) {
-    banner.style.display = "block";
-    btnGuardar.disabled = true;
-    btnGuardar.title = "Configure las credenciales de Supabase";
-  }
-
-  /* ============================================================
-     3) FECHA AUTOMÁTICA (hora LOCAL, no UTC)
-     ============================================================ */
-  function fechaHoyLocal() {
-    var d = new Date();
-    var local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 10);
-  }
-  function ponerFecha() { inputFecha.value = fechaHoyLocal(); }
-  ponerFecha();
-  /* Si la página queda abierta y cambia el día, se actualiza sola */
-  setInterval(ponerFecha, 60000);
-
-  /* ============================================================
-     4) UTILIDADES DE LECTURA / VALIDACIÓN
-     ============================================================ */
-  function val(name) {
-    var el = form.elements[name];
-    if (!el) return "";
-    return String(el.value === undefined ? "" : el.value).trim();
-  }
-
-  function valoresMarcados(name) {
-    var nodos = form.querySelectorAll('input[name="' + name + '"]:checked');
-    return Array.prototype.map.call(nodos, function (c) { return c.value; });
-  }
-
-  function esPositivo(v) {
-    var n = Number(v);
-    return isFinite(n) && n > 0;
-  }
-
-  /* --- Manejo visual de errores --- */
-  function limpiarErrores() {
-    document.querySelectorAll(".campo-error").forEach(function (e) {
-      e.classList.remove("campo-error");
+    // 2. FECHA AUTOMÁTICA
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
     });
-    document.querySelectorAll(".error-msg").forEach(function (e) {
-      e.textContent = "";
-    });
-  }
 
-  function marcarError(name) {
-    var g = document.querySelector('[data-grupo="' + name + '"]');
-    if (g) g.classList.add("campo-error");
-  }
+    // 3. ENVÍO Y VALIDACIÓN DE DATOS
+    const form = document.getElementById('plantForm');
+    const errorBanner = document.getElementById('error_banner');
 
-  function ponerMensaje(name, msg) {
-    var p = document.querySelector('[data-err="' + name + '"]');
-    if (p && !p.textContent) p.textContent = msg;
-  }
-
-  function enfocarPrimerError() {
-    var g = document.querySelector(".campo-error");
-    if (!g) return;
-    var c = g.querySelector("input, select, textarea");
-    if (c) {
-      try { c.focus({ preventScroll: true }); } catch (e) { c.focus(); }
-    }
-    g.scrollIntoView({ block: "center", behavior: "smooth" });
-  }
-
-  /* ============================================================
-     5) AVISOS AL USUARIO (toast)
-     ============================================================ */
-  function aviso(tipo, texto) {
-    var d = document.createElement("div");
-    d.className = "toast " + (tipo === "ok" ? "ok" : tipo === "info" ? "info" : "err");
-    d.setAttribute("role", tipo === "err" ? "alert" : "status");
-    d.textContent = texto;
-    avisos.appendChild(d);
-    var vida = (tipo === "err") ? 7000 : 4500;
-    setTimeout(function () {
-      d.style.opacity = "0";
-      setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 320);
-    }, vida);
-  }
-
-  /* ============================================================
-     6) RESTRICCIÓN NUMÉRICA (solo dígitos y un punto decimal)
-     ============================================================ */
-  Array.prototype.forEach.call(document.querySelectorAll("input.solo-numero"), function (inp) {
-    inp.addEventListener("keydown", function (e) {
-      if (e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
-      }
-    });
-    inp.addEventListener("input", function () {
-      var v = inp.value.replace(/[^\d.]/g, "");
-      var i = v.indexOf(".");
-      if (i !== -1) {
-        v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "");
-      }
-      if (v !== inp.value) inp.value = v;
-    });
-  });
+        
+        // Resetear mensajes de error previos
+        errorBanner.style.display = 'none';
+        errorBanner.innerHTML = '';
+        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+        document.getElementById('group_parts').classList.remove('input-error');
 
-  /* ============================================================
-     7) LÓGICA "NINGUNA" EN CONTRAINDICACIONES
-     ============================================================ */
-  var chkNinguna = document.getElementById("contraNinguna");
-  var chksContra = Array.prototype.slice.call(
-    form.querySelectorAll('input[name="contraindicaciones"]')
-  );
-  chksContra.forEach(function (c) {
-    c.addEventListener("change", function () {
-      if (c === chkNinguna && c.checked) {
-        chksContra.forEach(function (o) { if (o !== chkNinguna) o.checked = false; });
-      } else if (c !== chkNinguna && c.checked) {
-        chkNinguna.checked = false;
-      }
-    });
-  });
+        // Captura de valores
+        const plantId = document.getElementById('plant_id').value.trim();
+        const commonName = document.getElementById('common_name').value.trim();
+        const partsChecked = Array.from(document.querySelectorAll('input[name="plant_parts"]:checked')).map(cb => cb.value);
+        const doseG = parseFloat(document.getElementById('dose_g').value);
+        const doseMl = parseFloat(document.getElementById('dose_ml').value);
 
-  /* ============================================================
-     8) CONTADOR DE CARACTERES
-     ============================================================ */
-  function actualizarContador() {
-    contador.textContent = textarea.value.length + " / 1500";
-  }
-  textarea.addEventListener("input", actualizarContador);
-  actualizarContador();
+        let errors = [];
 
-  /* ============================================================
-     9) LIMPIEZA DE ERRORES AL CORREGIR
-        (delegado en document porque el encabezado está fuera del form)
-     ============================================================ */
-  function alCambiar(e) {
-    var g = e.target && e.target.closest ? e.target.closest("[data-grupo]") : null;
-    if (!g) return;
-    g.classList.remove("campo-error");
-    var n = g.getAttribute("data-grupo");
-    var p = document.querySelector('[data-err="' + n + '"]');
-    if (p) p.textContent = "";
-  }
-  document.addEventListener("input", alCambiar);
-  document.addEventListener("change", alCambiar);
-
-  /* ============================================================
-     10) VALIDACIÓN
-     ============================================================ */
-  function validar() {
-    var errores = [];
-
-    if (!val("usuario")) {
-      errores.push({ name: "usuario", msg: "Ingrese la identificación del usuario." });
-    }
-
-    var idp = val("id_planta");
-    if (!idp) {
-      errores.push({ name: "id_planta", msg: "El ID de la planta es obligatorio (*)." });
-    } else if (!/^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$/.test(idp)) {
-      errores.push({
-        name: "id_planta",
-        msg: "Use de 3 a 20 caracteres: letras, números, guion (-) o guion bajo (_)."
-      });
-    }
-
-    var nc = val("nombre_comun");
-    if (!nc) {
-      errores.push({ name: "nombre_comun", msg: "El nombre común es obligatorio (*)." });
-    } else if (nc.length < 3) {
-      errores.push({ name: "nombre_comun", msg: "El nombre común debe tener al menos 3 caracteres." });
-    }
-
-    if (valoresMarcados("partes").length === 0) {
-      errores.push({ name: "partes", msg: "Seleccione al menos una parte de la planta (*)." });
-    }
-
-    if (!val("metodo_preparacion")) {
-      errores.push({ name: "metodo_preparacion", msg: "Seleccione un método de preparación." });
-    }
-
-    var g  = val("dosis_gramos");
-    var ml = val("dosis_ml");
-
-    if (!g && !ml) {
-      errores.push({
-        name: "dosis_gramos",
-        msg: "Registre al menos una dosis (*): gramos o mililitros."
-      });
-    } else {
-      if (g && !esPositivo(g)) {
-        errores.push({ name: "dosis_gramos", msg: "La dosis en gramos debe ser un número mayor que 0." });
-      }
-      if (g && Number(g) > 10000) {
-        errores.push({ name: "dosis_gramos", msg: "Verifique la dosis: no debe exceder 10 000 g." });
-      }
-      if (ml && !esPositivo(ml)) {
-        errores.push({ name: "dosis_ml", msg: "La dosis en mililitros debe ser un número mayor que 0." });
-      }
-      if (ml && Number(ml) > 10000) {
-        errores.push({ name: "dosis_ml", msg: "Verifique la dosis: no debe exceder 10 000 ml." });
-      }
-    }
-
-    if (!val("toxicidad")) {
-      errores.push({ name: "toxicidad", msg: "Seleccione el nivel de toxicidad." });
-    }
-
-    if (val("observaciones").length > 1500) {
-      errores.push({ name: "observaciones", msg: "Máximo 1500 caracteres." });
-    }
-
-    return errores;
-  }
-
-  /* ============================================================
-     11) CONSTRUCCIÓN DEL REGISTRO
-     ============================================================ */
-  function construirPayload() {
-    var g  = val("dosis_gramos");
-    var ml = val("dosis_ml");
-
-    var contra = valoresMarcados("contraindicaciones");
-    if (contra.indexOf("Ninguna") !== -1) contra = [];
-
-    return {
-      id_planta:          val("id_planta").toUpperCase(),
-      nombre_comun:       val("nombre_comun"),
-      nombre_cientifico:  val("nombre_cientifico") || null,
-      epoca_cosecha:      val("epoca_cosecha") || null,
-      tipo_suelo:         val("tipo_suelo") || null,
-      partes:             valoresMarcados("partes"),
-      metodo_preparacion: val("metodo_preparacion"),
-      dosis_gramos:       g  ? Number(g)  : null,
-      dosis_ml:           ml ? Number(ml) : null,
-      toxicidad:          val("toxicidad"),
-      contraindicaciones: contra,
-      observaciones:      val("observaciones") || null,
-      usuario:            val("usuario"),
-      rol:                val("rol") || "Estudiante",
-      fecha_registro:     inputFecha.value || fechaHoyLocal()
-    };
-  }
-
-  /* ============================================================
-     12) MANEJO DE ERRORES DE SUPABASE
-     ============================================================ */
-  function manejarError(err) {
-    var codigo = (err && err.code) ? String(err.code) : "";
-    var texto  = (err && (err.message || err.error_description)) || "Error desconocido";
-
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      aviso("err", "Sin conexión a Internet. El registro no se envió; reintente cuando recupere la red.");
-      return;
-    }
-    if (codigo === "23505") {
-      marcarError("id_planta");
-      ponerMensaje("id_planta", "Ese ID de planta ya existe en la base de datos.");
-      aviso("err", "El ID de planta ya está registrado. Use un identificador distinto.");
-      enfocarPrimerError();
-      return;
-    }
-    if (codigo === "42P01") {
-      aviso("err", "La tabla 'plantas_medicinales' no existe. Ejecute el script SQL en Supabase.");
-      return;
-    }
-    if (codigo === "42501" || /row-level security|permission denied/i.test(texto)) {
-      aviso("err", "Permiso denegado (RLS). Cree las políticas de INSERT/SELECT para el rol 'anon'.");
-      return;
-    }
-    if (codigo === "23514") {
-      aviso("err", "Los datos no cumplen una regla de la base de datos: " + texto);
-      return;
-    }
-    if (codigo === "23502") {
-      aviso("err", "Falta un dato obligatorio en la tabla: " + texto);
-      return;
-    }
-    if (/Failed to fetch|NetworkError|Load failed/i.test(texto)) {
-      aviso("err", "No se pudo contactar a Supabase. Verifique la URL, la clave anónima y su conexión.");
-      return;
-    }
-    aviso("err", "Error al guardar: " + texto);
-  }
-
-  /* ============================================================
-     13) ENVÍO DEL FORMULARIO
-     ============================================================ */
-  form.addEventListener("submit", function (ev) {
-    ev.preventDefault();
-
-    if (!sb) {
-      aviso("err", "Falta configurar la URL y la clave anónima de Supabase en el código.");
-      return;
-    }
-
-    limpiarErrores();
-
-    var errores = validar();
-    if (errores.length) {
-      errores.forEach(function (e) {
-        marcarError(e.name);
-        ponerMensaje(e.name, e.msg);
-      });
-      aviso("err", "No se guardó: revise " + errores.length + " campo(s) marcado(s) en rojo.");
-      enfocarPrimerError();
-      return;
-    }
-
-    var payload = construirPayload();
-
-    /* Bloqueo anti doble clic */
-    btnGuardar.disabled = true;
-    btnGuardar.textContent = "Guardando…";
-
-    sb.from("plantas_medicinales")
-      .insert(payload)
-      .then(function (res) {
-        if (res.error) throw res.error;
-        aviso("ok", "✔ Registro guardado: " + payload.id_planta + " — " + payload.nombre_comun);
-        prepararNuevoRegistro();
-      })
-      .catch(function (err) {
-        manejarError(err);
-      })
-      .then(function () {
-        if (CONFIG_OK) {
-          btnGuardar.disabled = false;
-          btnGuardar.textContent = "Guardar registro";
+        // Validaciones en cliente
+        if (!plantId) {
+            document.getElementById('plant_id').classList.add('input-error');
+            errors.push("El <strong>ID Planta</strong> es obligatorio.");
         }
-      });
-  });
+        if (!commonName) {
+            document.getElementById('common_name').classList.add('input-error');
+            errors.push("El <strong>Nombre Común</strong> es obligatorio.");
+        }
+        if (partsChecked.length === 0) {
+            document.getElementById('group_parts').classList.add('input-error');
+            errors.push("Debe seleccionar al menos una <strong>Parte de la Planta</strong>.");
+        }
+        if (isNaN(doseG) || doseG <= 0) {
+            document.getElementById('dose_g').classList.add('input-error');
+            errors.push("Ingrese una <strong>Dosis en gramos</strong> mayor a 0.");
+        }
+        if (isNaN(doseMl) || doseMl <= 0) {
+            document.getElementById('dose_ml').classList.add('input-error');
+            errors.push("Ingrese un <strong>Volumen en ml</strong> mayor a 0.");
+        }
 
-  /* ============================================================
-     14) LIMPIAR / NUEVO REGISTRO
-     ============================================================ */
-  function prepararNuevoRegistro() {
-    var usuario = val("usuario");
-    var rol     = val("rol");
+        // Si existen errores, mostrarlos inmediatamente
+        if (errors.length > 0) {
+            errorBanner.innerHTML = "Por favor corrige los siguientes campos antes de guardar:<br>• " + errors.join("<br>• ");
+            errorBanner.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
 
-    form.reset();                     /* vuelve a los valores por defecto del HTML */
+        // Estructura de datos normalizada para Supabase
+        const prepMethod = document.querySelector('input[name="prep_method"]:checked')?.value || 'Infusión';
+        const toxicity = document.querySelector('input[name="toxicity"]:checked')?.value || 'Baja/Nula';
+        const contraChecked = Array.from(document.querySelectorAll('input[name="contraindications"]:checked')).map(cb => cb.value);
 
-    form.elements["usuario"].value = usuario;
-    form.elements["rol"].value     = rol || "Estudiante";
+        const recordData = {
+            plant_id: plantId,
+            common_name: commonName,
+            scientific_name: document.getElementById('scientific_name').value.trim(),
+            harvest_season: document.getElementById('harvest_season').value,
+            soil_type: document.getElementById('soil_type').value,
+            plant_parts: partsChecked.join(', '), // Convertido a cadena separada por comas
+            prep_method: prepMethod,
+            dose_g: doseG,
+            dose_ml: doseMl,
+            toxicity: toxicity,
+            contraindications: contraChecked.join(', '), // Convertido a cadena
+            comments: document.getElementById('comments').value.trim(),
+            recorded_by: document.getElementById('user_role').value.trim(),
+            recorded_at: document.getElementById('current_date').value
+        };
 
-    ponerFecha();                     /* el reset borra la fecha automática */
-    limpiarErrores();
-    actualizarContador();
+        console.log("Enviando registro a Supabase...", recordData);
 
-    var idp = form.elements["id_planta"];
-    if (idp) idp.focus();
-  }
+        try {
+            // Guardar registro en la tabla de Supabase
+            const { data, error } = await supabase
+                .from('etnobotanica_registros')
+                .insert([recordData])
+                .select();
 
-  btnLimpiar.addEventListener("click", function () {
-    if (!window.confirm("¿Borrar los datos capturados e iniciar un nuevo registro?")) return;
-    prepararNuevoRegistro();
-    aviso("info", "Formulario restablecido. Puede capturar una nueva planta.");
-  });
+            if (error) {
+                console.error("Error devuelto por Supabase:", error);
+                alert("Error al guardar en Supabase:\n" + error.message + "\n\nSugerencia: " + (error.hint || "Verifique que ejecutó el SQL del Paso 1."));
+            } else {
+                console.log("Respuesta de inserción exitosa:", data);
+                alert("¡El registro de la planta '" + commonName + "' fue guardado con éxito en Supabase!");
+                resetForm();
+            }
+        } catch (err) {
+            console.error("Excepción inesperada:", err);
+            alert("Ocurrió un error inesperado de conexión: " + err.message);
+        }
+    });
 
-  /* ============================================================
-     15) AVISO AL SALIR CON DATOS SIN GUARDAR
-     ============================================================ */
-  var enviado = false;
-  form.addEventListener("submit", function () { enviado = true; });
-
-  window.addEventListener("beforeunload", function (e) {
-    if (enviado) return;
-    var hayDatos = val("id_planta") || val("nombre_comun") || val("observaciones");
-    if (!hayDatos) return;
-    e.preventDefault();
-    e.returnValue = "";
-  });
-
-})();
+    function resetForm() {
+        form.reset();
+        document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
+        errorBanner.style.display = 'none';
+        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+    }
 </script>
 </body>
 </html>
